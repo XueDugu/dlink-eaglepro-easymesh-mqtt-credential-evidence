@@ -1,0 +1,25 @@
+D-Link Eagle PRO AI - shipped default database enables the Mesh role
+=====================================================================
+
+The EasyMesh broker is started from the Mesh notification path, which runs when the Mesh role
+is enabled. In the factory default database shipped in the web package (`reset.dat`), the
+fields that gate that path are enabled:
+
+  id 0x00C70001  len=4  value=1     # sub_4632B0 reads this into v23
+  id 0x00C70002  len=4  value=0     # sub_460760 reads this into v4
+  id 0x00440001  len=4  value=1     # sub_4632B0 reads this into v24
+  id 0x00C70003  absent             # sub_4632B0 reads this, defaults to 0
+
+Evaluated against the mesh-enabled predicate (sub_460760):
+  v4 = 0  ->  the (v4 && ...) branch is false  ->  returns 1 (mesh enabled)
+
+Evaluated against the Mesh callback (sub_4632B0):
+  v23 = 1, v24 = 1 (both non-zero), predicate = 1
+  ->  because v23 && v24 hold and the 0xC70003 byte is 0,
+      it runs sub_45FF90(); sub_461030(); sub_460860()  (writes mosquitto.conf/passwd,
+      starts the broker).
+
+Record format (measured on the shipped default database): id(u32 LE) len(u16 LE) value(len bytes).
+
+Result: in the factory default state the Mesh role is enabled, so the broker with the fixed
+admin/admin credential is brought up without any owner action, listening on 0.0.0.0:1883.

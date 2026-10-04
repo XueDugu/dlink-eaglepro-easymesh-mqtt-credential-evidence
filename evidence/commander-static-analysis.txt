@@ -1,0 +1,48 @@
+D-Link Eagle PRO AI - commander writes the EasyMesh MQTT broker credential
+==========================================================================
+(IDA Pro 9.2 / Hex-Rays; commander image base 0x400000)
+
+Functions that write the broker configuration and the fixed credential:
+
+  R32  /usr/bin/commander   (aarch64)     sub_460860   fwrite("admin:admin\n") at 0x460D74
+  M32  /usr/bin/commander   (aarch64)     sub_460280   fwrite("admin:admin\n") at 0x46078C
+  R15  /usr/sbin/commander  (MIPS32 BE)   sub_475CE8   fwrite("admin:admin\n")
+  E15  /usr/sbin/commander  (MIPS32 BE)   sub_472F28   fwrite("admin:admin\n")
+
+R32 sub_460860 (Hex-Rays, addresses are VA):
+
+  v6 = fopen("/etc/emDaemon/mosquitto.conf", "w");      /* 0x460CD4 */
+  fwrite("user root\n", 1u, 0xAu, v6);
+  fwrite("listener 1883 0.0.0.0\n", 1u, 0x16u, v6);     /* 0x460D0C, all interfaces */
+  fwrite("allow_anonymous false\n", 1u, 0x16u, v6);
+  fwrite("password_file /etc/emDaemon/passwd\n", 1u, 0x23u, v6);
+  v8 = fopen("/etc/emDaemon/passwd", "w");              /* 0x460D54 */
+  fwrite("admin:admin\n", 1u, 0xCu, v8);                /* 0x460D74, fixed credential */
+  ...
+
+The same function also writes /etc/emDaemon/EasyMeshDaemon_config.txt:
+
+  port-number: 1883
+  user-name: admin
+  user-password: admin
+  password-file-path: /etc/emDaemon/passwd
+  mosquitto-config-file-path: /etc/emDaemon/mosquitto.conf
+  mosquitto-broker-file-path: mosquitto
+
+and the topic list /tmp/emDaemon/topics.txt:
+
+  acs/sitesurvey/toAllMembers/#
+  acs/set_channel/toOne/#
+  acs/memberreport/toMaster/#
+
+Call path (boot / notification driven):
+
+  commander system_init (R32 sub_4064D0) runs a boot table of job->init handlers and logs
+  syslog("init %s", name). One entry is handle_mesh.c:init_mesh_daemon (R32 sub_464720);
+  it creates the runtime directories and registers the Mesh topic callback
+  sub_406180(7, sub_4632B0). The csman notification dispatcher sub_4062A0 (called from the
+  csman event handler sub_4068A0) invokes that callback, which reaches sub_461870 /
+  sub_460860 and starts the broker/daemon.
+
+  xrefs(sub_460860) = 0x462AD8 (sub_461870), 0x463710 (sub_4632B0)
+  xrefs(sub_4632B0) = 0x464904 (data, in sub_464720 = init_mesh_daemon)

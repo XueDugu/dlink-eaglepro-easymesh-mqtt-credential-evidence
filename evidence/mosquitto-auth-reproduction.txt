@@ -1,0 +1,41 @@
+D-Link Eagle PRO AI - EasyMesh MQTT broker accepts the hard-coded admin/admin credential
+=======================================================================================
+
+Broker configuration written exactly as commander emits it (see commander-static-analysis.txt):
+
+  user root
+  listener 1883 0.0.0.0
+  allow_anonymous false
+  password_file /etc/emDaemon/passwd
+
+Password file:
+
+  admin:admin
+
+Shipped broker version:
+
+  mosquitto version 2.0.14
+
+Listener state while the broker is running:
+
+  tcp        0      0 0.0.0.0:1883            0.0.0.0:*               LISTEN
+
+Raw MQTT 3.1.1 CONNECT results (first four bytes of the response shown as CONNACK):
+
+  - username=admin, password=admin   -> 20 02 00 00   (connection accepted)
+  - username=admin, password=wrong   -> 20 02 00 05   (not authorised)
+  - no username / no password        -> connection refused (not authorised)
+
+Broker log for the accepted and the rejected attempt:
+
+  New connection from <client> on port 1883.
+  New client connected from <client> as x (p2, c1, k60, u'admin').
+  Sending CONNACK to x (0, 0)
+  Client x closed its connection.
+  New connection from <client> on port 1883.
+  Sending CONNACK to x (0, 5)
+  Client x disconnected, not authorised.
+
+Conclusion: the shipped broker authenticates the fixed admin/admin account against the
+shipped password file and rejects any other credential; the EasyMesh control topics that
+commander itself subscribes to and publishes on are reachable with that credential.
